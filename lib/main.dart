@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'auth_gate.dart';
+import 'hour_slot.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,30 +28,42 @@ class BatteryApp extends StatelessWidget {
   }
 }
 
-class DayScreen extends StatefulWidget {
+class DayScreen extends StatelessWidget {
   const DayScreen({super.key});
 
-  @override
-  State<DayScreen> createState() => _DayScreenState();
-}
-
-class _DayScreenState extends State<DayScreen> {
-  List<HourSlot> day = sampleDay();
-
-  void openHour(HourSlot slot) {
+  void openHour(BuildContext context, HourSlot slot) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => EditHourScreen(slot: slot)),
-    ).then((_) {
-      setState(() {});
-    });
+    );
+  }
+
+  Future<void> deleteHour(BuildContext context, HourSlot slot) async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this hour?'),
+        content: Text('${slot.hour}:00 · ${slot.activity}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (sure == true) {
+      // Delete exactly this hour's document
+      await myHours().doc('${slot.hour}').delete();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final battery = simulate(day);
-    final death = deathHour(day);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Battery Planner'),
@@ -61,104 +75,128 @@ class _DayScreenState extends State<DayScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: death != null ? Colors.red : Colors.green,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              death != null
-                  ? '☠ Dies at $death:00'
-                  : 'Survives with ${battery.last}% left',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: myHours().orderBy('hour').snapshots(),
+        builder: (context, snapshot) {
+          // Error state: for example, the rules refused
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Could not load your day.\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: day.length,
-              itemBuilder: (context, index) {
-                final slot = day[index];
-                final isDead = death != null && slot.hour > death;
+            );
+          }
 
-                if (isDead) {
-                  return ListTile(
-                    onTap: () => openHour(slot),
-                    leading: Text('${slot.hour}:00'),
-                    title: Row(
-                      children: [
-                        Text(slot.activity),
-                        if (slot.charging)
-                          const Icon(Icons.bolt, color: Colors.amber),
-                      ],
+          // Loading state: nothing has arrived yet
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final day = snapshot.data!.docs.map(HourSlot.fromDoc).toList();
+
+          // Empty state: this user has no hours yet
+          if (day.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Your day is empty.',
+                      style: TextStyle(fontSize: 18),
                     ),
-                    subtitle: const Text('☠ Phone is dead'),
-                    trailing: const Text('—'),
-                  );
-                }
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => addSampleHours(),
+                      child: const Text('Add a sample day'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-                return ListTile(
-                  onTap: () => openHour(slot),
-                  leading: Text('${slot.hour}:00'),
-                  title: Row(
-                    children: [
-                      Text(slot.activity),
-                      if (slot.charging)
-                        const Icon(Icons.bolt, color: Colors.amber),
-                    ],
+          // Computed every time the data arrives, never saved
+          final battery = simulate(day);
+          final death = deathHour(day);
+
+          return Column(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: death != null ? Colors.red : Colors.green,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  death != null
+                      ? '☠ Dies at $death:00'
+                      : 'Survives with ${battery.last}% left',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
-                  subtitle: LinearProgressIndicator(
-                    value: battery[index] / 100,
-                    minHeight: 8,
-                    color: battery[index] < 20 ? Colors.red : Colors.green,
-                  ),
-                  trailing: Text('${battery[index]}%'),
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: day.length,
+                  itemBuilder: (context, index) {
+                    final slot = day[index];
+                    final isDead = death != null && slot.hour > death;
+
+                    if (isDead) {
+                      return ListTile(
+                        onTap: () => openHour(context, slot),
+                        onLongPress: () => deleteHour(context, slot),
+                        leading: Text('${slot.hour}:00'),
+                        title: Row(
+                          children: [
+                            Text(slot.activity),
+                            if (slot.charging)
+                              const Icon(Icons.bolt, color: Colors.amber),
+                          ],
+                        ),
+                        subtitle: const Text('☠ Phone is dead'),
+                        trailing: const Text('—'),
+                      );
+                    }
+
+                    return ListTile(
+                      onTap: () => openHour(context, slot),
+                      onLongPress: () => deleteHour(context, slot),
+                      leading: Text('${slot.hour}:00'),
+                      title: Row(
+                        children: [
+                          Text(slot.activity),
+                          if (slot.charging)
+                            const Icon(Icons.bolt, color: Colors.amber),
+                        ],
+                      ),
+                      subtitle: LinearProgressIndicator(
+                        value: battery[index] / 100,
+                        minHeight: 8,
+                        color: battery[index] < 20 ? Colors.red : Colors.green,
+                      ),
+                      trailing: Text('${battery[index]}%'),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
-}
-
-class HourSlot {
-  HourSlot(this.hour, this.activity);
-
-  final int hour;
-  String activity;
-  bool charging = false;
-}
-
-List<HourSlot> sampleDay() {
-  return [
-    HourSlot(7, 'video'),
-    HourSlot(8, 'video'),
-    HourSlot(9, 'chat'),
-    HourSlot(10, 'idle'),
-    HourSlot(11, 'games'),
-    HourSlot(12, 'games'),
-    HourSlot(13, 'chat'),
-    HourSlot(14, 'idle'),
-    HourSlot(15, 'video'),
-    HourSlot(16, 'video'),
-    HourSlot(17, 'games'),
-    HourSlot(18, 'chat'),
-    HourSlot(19, 'video'),
-    HourSlot(20, 'video'),
-    HourSlot(21, 'games'),
-    HourSlot(22, 'chat'),
-    HourSlot(23, 'idle'),
-  ];
 }
 
 const drainPerHour = {
@@ -233,6 +271,7 @@ class EditHourScreen extends StatefulWidget {
 class _EditHourScreenState extends State<EditHourScreen> {
   String activity = '';
   bool charging = false;
+  bool saving = false;
 
   @override
   void initState() {
@@ -241,10 +280,23 @@ class _EditHourScreenState extends State<EditHourScreen> {
     charging = widget.slot.charging;
   }
 
-  void save() {
-    widget.slot.activity = activity;
-    widget.slot.charging = charging;
-    Navigator.pop(context);
+  Future<void> save() async {
+    setState(() => saving = true);
+    try {
+      // Update exactly this hour's document in Firestore
+      await myHours().doc('${widget.slot.hour}').update({
+        'activity': activity,
+        'charging': charging,
+      });
+      if (mounted) Navigator.pop(context);
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        setState(() => saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save: ${e.message}')),
+        );
+      }
+    }
   }
 
   @override
@@ -290,8 +342,8 @@ class _EditHourScreenState extends State<EditHourScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: save,
-                child: const Text('Save'),
+                onPressed: saving ? null : save,
+                child: Text(saving ? 'Saving…' : 'Save'),
               ),
             ),
           ],

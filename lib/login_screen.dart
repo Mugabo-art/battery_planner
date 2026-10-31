@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'hour_slot.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -26,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (newAccount) {
         await auth.createUserWithEmailAndPassword(
             email: _email.text.trim(), password: _password.text);
+        await addSampleHours();
       } else {
         await auth.signInWithEmailAndPassword(
             email: _email.text.trim(), password: _password.text);
@@ -47,6 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Wrong email or password.';
       case 'weak-password':
         return 'Choose a stronger password.';
+      case 'invalid-email':
+        return 'That email address is not valid.';
       case 'network-request-failed':
         return 'No internet connection.';
       default:
