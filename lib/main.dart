@@ -1,6 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+import 'auth_gate.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const BatteryApp());
 }
 
@@ -15,7 +21,7 @@ class BatteryApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
       ),
-      home: const DayScreen(),
+      home: const AuthGate(),
     );
   }
 }
@@ -45,7 +51,16 @@ class _DayScreenState extends State<DayScreen> {
     final death = deathHour(day);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Battery Planner')),
+      appBar: AppBar(
+        title: const Text('Battery Planner'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+            onPressed: () => FirebaseAuth.instance.signOut(),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Container(
