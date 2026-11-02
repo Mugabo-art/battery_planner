@@ -60,6 +60,33 @@ class BatteryState extends ChangeNotifier {
     return null;
   }
 
+  // The battery % after a given hour (computed, never saved).
+  int levelAt(int hour) {
+    final levels = battery;
+    final index = _hours.indexWhere((s) => s.hour == hour);
+    return index == -1 ? 0 : levels[index];
+  }
+
+  // Filter: 'all', 'heavy' (video/games) or 'charging'.
+  String _filter = 'all';
+  String get filter => _filter;
+
+  void setFilter(String value) {
+    _filter = value;
+    notifyListeners();
+  }
+
+  // The hours to show, computed from the hours and the filter.
+  List<HourSlot> get visible {
+    if (_filter == 'heavy') {
+      return _hours.where((s) => drainOf(s.activity) >= 12).toList();
+    }
+    if (_filter == 'charging') {
+      return _hours.where((s) => s.charging).toList();
+    }
+    return _hours;
+  }
+
   // Actions: the brain hands the job to the repository.
   Future<void> update(HourSlot slot) => _repo.update(slot);
   Future<void> remove(HourSlot slot) => _repo.delete(slot);

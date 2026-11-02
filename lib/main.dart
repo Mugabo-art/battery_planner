@@ -11,6 +11,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'screens/auth_gate.dart';
+import 'widgets/activity_style.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,18 @@ class BatteryApp extends StatelessWidget {
       title: 'Battery Planner',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.bg,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.green,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: AppColors.green,
+          onPrimary: Colors.black,
+          surface: AppColors.bg,
+          error: AppColors.red,
+        ),
       ),
       home: const AuthGate(),
     );
