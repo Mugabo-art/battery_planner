@@ -1,8 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../repositories/hour_repository.dart';
+import '../state/battery_state.dart';
+import 'day_screen.dart';
 import 'login_screen.dart';
-import 'main.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -15,10 +18,15 @@ class AuthGate extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        if (snapshot.data == null) {
+        final user = snapshot.data;
+        if (user == null) {
           return const LoginScreen();
         }
-        return const DayScreen();
+        // Signed in: one brain for this user, given to the day screen.
+        return ChangeNotifierProvider<BatteryState>(
+          create: (_) => BatteryState(HourRepository(user.uid)),
+          child: const DayScreen(),
+        );
       },
     );
   }

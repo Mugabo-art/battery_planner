@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'hour_slot.dart';
+import '../repositories/hour_repository.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,7 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (newAccount) {
         await auth.createUserWithEmailAndPassword(
             email: _email.text.trim(), password: _password.text);
-        await addSampleHours();
+        // The brain does not exist yet, so we use the repository directly.
+        await HourRepository(auth.currentUser!.uid).addSamples();
       } else {
         await auth.signInWithEmailAndPassword(
             email: _email.text.trim(), password: _password.text);

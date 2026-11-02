@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class HourSlot {
   HourSlot(this.hour, this.activity, {this.charging = false});
@@ -8,7 +7,6 @@ class HourSlot {
   String activity;
   bool charging;
 
-  // Only the facts the user chose. The battery is computed, never saved.
   Map<String, dynamic> toMap() => {
     'hour': hour,
     'activity': activity,
@@ -25,13 +23,17 @@ class HourSlot {
   }
 }
 
-// The signed-in user's hours: users/{uid}/hours
-CollectionReference<Map<String, dynamic>> myHours() {
-  final uid = FirebaseAuth.instance.currentUser!.uid;
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .collection('hours');
+// How much battery each activity uses per hour (a fixed rule).
+const drainPerHour = {
+  'video': 12,
+  'games': 15,
+  'chat': 5,
+  'music': 6,
+  'idle': 2,
+};
+
+int drainOf(String activity) {
+  return drainPerHour[activity] ?? 0;
 }
 
 List<HourSlot> sampleDay() {
@@ -54,13 +56,4 @@ List<HourSlot> sampleDay() {
     HourSlot(22, 'chat'),
     HourSlot(23, 'idle'),
   ];
-}
-
-// Sample data, written once when a new account is created
-Future<void> addSampleHours() async {
-  final batch = FirebaseFirestore.instance.batch();
-  for (final slot in sampleDay()) {
-    batch.set(myHours().doc('${slot.hour}'), slot.toMap());
-  }
-  await batch.commit();
 }
