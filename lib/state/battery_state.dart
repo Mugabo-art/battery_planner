@@ -7,6 +7,7 @@ import '../repositories/hour_repository.dart';
 
 class BatteryState extends ChangeNotifier {
   BatteryState(this._repo) {
+    debugPrint('Brain born for ${_repo.uid}'); // NEW
     // Born: open the pipe to the backend, once.
     _subscription = _repo.watchAll().listen(
           (list) {
@@ -94,6 +95,7 @@ class BatteryState extends ChangeNotifier {
 
   @override
   void dispose() {
+    debugPrint('Brain disposed: pipe closed'); // NEW
     _subscription?.cancel();
     super.dispose();
   }

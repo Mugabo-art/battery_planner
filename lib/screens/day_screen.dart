@@ -10,16 +10,12 @@ import 'edit_hour_screen.dart';
 class DayScreen extends StatelessWidget {
   const DayScreen({super.key});
 
-  // Open the edit screen and hand it the SAME brain.
+  // EXPERIMENT D: the brain is NOT handed over.
   void _openHour(BuildContext context, HourSlot slot) {
-    final state = context.read<BatteryState>();
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider<BatteryState>.value(
-          value: state,
-          child: EditHourScreen(slot: slot),
-        ),
+        builder: (_) => EditHourScreen(slot: slot),
       ),
     );
   }
