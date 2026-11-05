@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../models/hour_slot.dart';
@@ -19,12 +22,23 @@ class _EditHourScreenState extends State<EditHourScreen> {
   String activity = '';
   bool charging = false;
   bool saving = false;
+  File? photo; // a new photo picked on this phone, not uploaded yet
 
   @override
   void initState() {
     super.initState();
     activity = widget.slot.activity;
     charging = widget.slot.charging;
+  }
+
+  Future<void> pickPhoto(ImageSource source) async {
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1200, // phone photos are huge: make them smaller
+      imageQuality: 70, // and lighter
+    );
+    if (picked == null) return; // the user cancelled
+    setState(() => photo = File(picked.path));
   }
 
   Future<void> save() async {
@@ -43,6 +57,24 @@ class _EditHourScreenState extends State<EditHourScreen> {
         );
       }
     }
+  }
+
+  Widget photoPreview() {
+    if (photo != null) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Image.file(
+            photo!,
+            height: 180,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink(); // nothing to show
   }
 
   @override
@@ -147,6 +179,34 @@ class _EditHourScreenState extends State<EditHourScreen> {
               value: charging,
               onChanged: (value) => setState(() => charging = value),
             ),
+          ),
+          const SizedBox(height: 24),
+
+          // Photo
+          const Text('Photo',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          photoPreview(),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed:
+                  saving ? null : () => pickPhoto(ImageSource.camera),
+                  icon: const Icon(Icons.photo_camera_rounded),
+                  label: const Text('Camera'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed:
+                  saving ? null : () => pickPhoto(ImageSource.gallery),
+                  icon: const Icon(Icons.photo_library_rounded),
+                  label: const Text('Gallery'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
