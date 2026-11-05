@@ -1,13 +1,15 @@
 import 'dart:async';
+import 'dart:io'; // NEW: for File
 
 import 'package:flutter/foundation.dart';
 
 import '../models/hour_slot.dart';
 import '../repositories/hour_repository.dart';
+import '../repositories/photo_repository.dart'; // NEW
 
 class BatteryState extends ChangeNotifier {
-  BatteryState(this._repo) {
-    debugPrint('Brain born for ${_repo.uid}'); // NEW
+  BatteryState(this._repo, this._photos) { // CHANGED: was BatteryState(this._repo)
+    debugPrint('Brain born for ${_repo.uid}');
     // Born: open the pipe to the backend, once.
     _subscription = _repo.watchAll().listen(
           (list) {
@@ -25,6 +27,7 @@ class BatteryState extends ChangeNotifier {
   }
 
   final HourRepository _repo;
+  final PhotoRepository _photos; // NEW
   StreamSubscription<List<HourSlot>>? _subscription;
 
   // The data: private, so only the brain can change it.
@@ -92,10 +95,11 @@ class BatteryState extends ChangeNotifier {
   Future<void> update(HourSlot slot) => _repo.update(slot);
   Future<void> remove(HourSlot slot) => _repo.delete(slot);
   Future<void> addSamples() => _repo.addSamples();
+  Future<String> uploadPhoto(File photo) => _photos.upload(photo); // NEW
 
   @override
   void dispose() {
-    debugPrint('Brain disposed: pipe closed'); // NEW
+    debugPrint('Brain disposed: pipe closed');
     _subscription?.cancel();
     super.dispose();
   }

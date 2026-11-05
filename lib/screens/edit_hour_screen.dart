@@ -45,15 +45,26 @@ class _EditHourScreenState extends State<EditHourScreen> {
     final state = context.read<BatteryState>(); // read BEFORE the await
     setState(() => saving = true);
     try {
+      // NEW: keep the old photo, unless a new one was picked: upload it first.
+      String? photoUrl = widget.slot.photoUrl;
+      if (photo != null) {
+        photoUrl = await state.uploadPhoto(photo!);
+      }
+
       await state.update(
-        HourSlot(widget.slot.hour, activity, charging: charging),
+        HourSlot(
+          widget.slot.hour,
+          activity,
+          charging: charging,
+          photoUrl: photoUrl, // NEW
+        ),
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         setState(() => saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save. Try again.')),
+          SnackBar(content: Text('Could not save: $e')), // CHANGED: shows the reason
         );
       }
     }

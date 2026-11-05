@@ -1,16 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HourSlot {
-  HourSlot(this.hour, this.activity, {this.charging = false});
+  HourSlot(this.hour, this.activity, {this.charging = false, this.photoUrl}); // CHANGED
 
   final int hour;
   String activity;
   bool charging;
+  final String? photoUrl; // NEW: a link to the photo, or null: no photo
 
   Map<String, dynamic> toMap() => {
     'hour': hour,
     'activity': activity,
     'charging': charging,
+    'photoUrl': photoUrl, // NEW
   };
 
   factory HourSlot.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -19,6 +21,7 @@ class HourSlot {
       (data['hour'] as num).toInt(),
       data['activity'] as String,
       charging: data['charging'] as bool? ?? false,
+      photoUrl: data['photoUrl'] as String?, // NEW
     );
   }
 }

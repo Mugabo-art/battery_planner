@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../repositories/hour_repository.dart';
+import '../repositories/photo_repository.dart'; // NEW
 import '../state/battery_state.dart';
 import 'day_screen.dart';
 import 'login_screen.dart';
@@ -24,7 +25,10 @@ class AuthGate extends StatelessWidget {
         }
         // Signed in: one brain for this user, given to the day screen.
         return ChangeNotifierProvider<BatteryState>(
-          create: (_) => BatteryState(HourRepository(user.uid)),
+          create: (_) => BatteryState(
+            HourRepository(user.uid),
+            PhotoRepository(), // NEW: the brain now gets both repositories
+          ),
           child: const DayScreen(),
         );
       },
